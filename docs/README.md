@@ -4,6 +4,7 @@ There is nothing special about this assembler, it supports a few basic mnemonics
  * Binary (`bin`) - A raw binary file
  * Fexec (`fexec`) - A custom format for an operating system I've worked on
  * Mach-O 64 (`macho64`) - A format for macOS 64-bit
+ * ELF (`elf`) - A format for Linux 64-bit
 
 ## Mnemonics
 

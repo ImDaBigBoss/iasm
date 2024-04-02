@@ -7,7 +7,8 @@
 typedef enum {
     BIN_FORMAT,
     FEXEC_FORMAT,
-    MACHO64_FORMAT
+    MACHO64_FORMAT,
+    ELF_FORMAT
 } executable_format_t;
 
 executable_format_t get_exec_type(char* name);
@@ -23,3 +24,4 @@ void write_exec(executable_format_t format, FILE* file, uint8_t* opcodes, uint64
 define_exec_write(bin);
 define_exec_write(fexec);
 define_exec_write(macho64);
+define_exec_write(elf);

@@ -2,6 +2,9 @@
 
 #include <executables/fexec.h>
 #include <executables/macho64.h>
+#include <executables/elf.h>
+
+#include <sys/stat.h>
 
 executable_format_t get_exec_type(char* name) {
     if (strcmp(name, "bin") == 0) {
@@ -10,8 +13,11 @@ executable_format_t get_exec_type(char* name) {
         return FEXEC_FORMAT;
     } else if (strcmp(name, "macho64") == 0) {
         return MACHO64_FORMAT;
+    } else if (strcmp(name, "elf") == 0) {
+        return ELF_FORMAT;
+    } else {
+        return -1;
     }
-    return -1;
 }
 
 void write_exec(executable_format_t format, FILE* file, uint8_t* opcodes, uint64_t entry_offset, int opcode_num, int absolute_address_num, uint64_t* absolute_address_addresses) {
@@ -25,10 +31,32 @@ void write_exec(executable_format_t format, FILE* file, uint8_t* opcodes, uint64
         case MACHO64_FORMAT:
             call_exec_write(macho64);
             break;
+        case ELF_FORMAT:
+            call_exec_write(elf);
+            break;
         default:
             printf("Unknown executable type!\n");
             break;
     }
+}
+
+void make_executable(FILE* file) {
+    //Set the executable bit wherever the read bit is set
+
+    struct stat st;
+    fstat(fileno(file), &st);
+
+    if (st.st_mode & S_IRUSR) {
+        st.st_mode |= S_IXUSR;
+    }
+    if (st.st_mode & S_IRGRP) {
+        st.st_mode |= S_IXGRP;
+    }
+    if (st.st_mode & S_IROTH) {
+        st.st_mode |= S_IXOTH;
+    }
+
+    fchmod(fileno(file), st.st_mode);
 }
 
 define_exec_write(bin) {
@@ -128,4 +156,61 @@ define_exec_write(macho64) {
         memset((void*) padding, 0, 0x1000);
         fwrite(padding, 0x1000 - segment_command_data.filesize, 1, file);
     }
+
+    make_executable(file);
+}
+
+define_exec_write(elf) {
+    uint64_t virtual_offset = 0x400000;
+    uint64_t code_offset = 0x1000;
+
+    //--- Define the header and segments ---
+    elf_header_t header = {
+        .magic = ELF_MAGIC,
+        .bitness = 2, //64-bit
+        .endian = 1, //Little endian
+        .header_version = 1,
+        .abi = 0,
+        .type = 2, //Dynamic
+        .instruction_set = 0x3E, //x86-64
+        .elf_version = 1,
+        .entry_point = virtual_offset + code_offset,
+        .program_header_offset = sizeof(elf_header_t), //Right after the header
+        .section_header_offset = 0, //We don't have any sections
+        .flags = 0, //No flags
+        .header_size = sizeof(elf_header_t),
+        .program_entry_size = sizeof(elf_program_header_t),
+        .program_num_entries = 1, //Text and data segments
+        .section_entry_size = 0, //We don't have any sections
+        .section_num_entries = 0,
+        .section_name_index = 0,
+    };
+
+    elf_program_header_t text_segment = {
+        .type = 1, //Program
+        .flags = 5, //Read and execute
+        .offset = code_offset,
+        .virtual_address = header.entry_point,
+        .physical_address = header.entry_point, //Irrelevant
+        .file_size = opcode_num,
+        .memory_size = opcode_num,
+        .alignment = 0x1000, //4KB pages, so align to 4KB
+    };
+
+    //---Change label reference addresses---
+    for (int i = 0; i < absolute_address_num; i++) {
+        uint64_t* label_ref = (uint64_t*) absolute_address_addresses[i];
+        *label_ref += text_segment.virtual_address;
+    }
+
+    //--- Write the file ---
+    fwrite(&header, sizeof(elf_header_t), 1, file);
+    fwrite(&text_segment, sizeof(elf_program_header_t), 1, file);
+    //Pad with 0 to 4k
+    uint8_t padding[0x1000 - (sizeof(elf_header_t) + sizeof(elf_program_header_t))];
+    memset((void*) padding, 0, 0x1000 - (sizeof(elf_header_t) + sizeof(elf_program_header_t)));
+    fwrite(padding, 0x1000 - (sizeof(elf_header_t) + sizeof(elf_program_header_t)), 1, file);
+    fwrite(opcodes, opcode_num, 1, file);
+
+    make_executable(file);
 }
