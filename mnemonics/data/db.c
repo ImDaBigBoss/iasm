@@ -9,26 +9,22 @@ define_mnemonic(DB) {
         operand_t* operand = &line->operands[i];
         
         if (operand->type == IMMEDIATE_OPERAND) {
-            union register_value_t {
-                uint64_t value;
-                uint8_t bytes[8];
-            };
-            union register_value_t reg_val;
-            reg_val.value = *((uint64_t*) operand->value);
+            op_immediate_value_t imm_val;
+            imm_val.value = *((uint64_t*) operand->value);
 
             int size;
-            if (reg_val.value <= UINT8_MAX) {
+            if (imm_val.value <= UINT8_MAX) {
                 size = 1;
-            } else if (reg_val.value <= UINT16_MAX) {
+            } else if (imm_val.value <= UINT16_MAX) {
                 size = 2;
-            } else if (reg_val.value <= UINT32_MAX) {
+            } else if (imm_val.value <= UINT32_MAX) {
                 size = 4;
             } else {
                 size = 8;
             }
 
             for (int i = 0; i < size; i++) {
-                append_opcode(reg_val.bytes[i]);
+                append_opcode(imm_val.bytes[i]);
             }
         } else if (operand->type == STRING_OPERAND) {
             char* string = (char*) operand->value;

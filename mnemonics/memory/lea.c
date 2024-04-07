@@ -51,11 +51,7 @@ define_mnemonic(LEA) {
             //We want to add a int32 displacement, so we set the mod field to 0b10
             append_opcode(modrm + 0x80);
 
-            union register_value_t {
-                uint32_t value;
-                uint8_t bytes[4];
-            };
-            union register_value_t reg_val;
+            op_immediate_value_t reg_val;
             reg_val.value = op2->displacement;
 
             for (int i = 0; i < 4; i++) {

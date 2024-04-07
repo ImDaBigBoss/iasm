@@ -457,6 +457,7 @@ bool lex_source(lvl2_line_t** lines, int line_num, uint8_t** opcodes, int* opcod
         check_mnemonic(SUB)
         check_mnemonic(LEA)
         check_mnemonic(MOV)
+        check_mnemonic(CMP)
         check_mnemonic(INT)
         check_mnemonic(SYSCALL)
         else {

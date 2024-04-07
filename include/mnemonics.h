@@ -24,6 +24,7 @@ typedef struct {
     int address;
 } replacement_t;
 
+
 #define define_mnemonic(name) \
     void mnemonic_##name(lvl2_line_t* line, uint8_t** opcodes, int* opcode_num, replacement_t** replacements, int* replacement_num, bool* errors_found)
 
@@ -58,6 +59,57 @@ typedef struct {
     (*replacements)[*replacement_num].type = RELATIVE_LABEL_REFERENCE; \
     (*replacement_num)++;
 
+
+typedef union {
+    uint64_t value;
+    uint8_t bytes[8];
+} op_immediate_value_t;
+
+#define get_32bit_capped_immediate_value(op, size) \
+    op_immediate_value_t imm_val; \
+    imm_val.value = *((uint64_t*) op->value); \
+    \
+    if (size == 8) { \
+        if (imm_val.value > UINT32_MAX) { \
+            throw_error("Value must be 32 bits (max 0xFFFFFFFF), even though the register is 64 bits"); \
+        } \
+    } else if (size == 4) { \
+        if (imm_val.value > UINT32_MAX) { \
+            throw_error("Value must be 32 bits (max 0xFFFFFFFF), since the register is 32 bits"); \
+        } \
+    } else if (size == 2) { \
+        if (imm_val.value > UINT16_MAX) { \
+            throw_error("Value must be 16 bits (max 0xFFFF), since the register is 16 bits"); \
+        } \
+    } else if (size == 1) { \
+        if (imm_val.value > UINT8_MAX) { \
+            throw_error("Value must be 8 bits (max 0xFF), since the register is 8 bits"); \
+        } \
+    }
+
+#define get_immediate_value(op, size) \
+    op_immediate_value_t imm_val; \
+    imm_val.value = *((uint64_t*) op->value); \
+    \
+    if (size == 8) { \
+        if (imm_val.value > UINT64_MAX) { \
+            throw_error("Value must be 64 bits (max 0xFFFFFFFFFFFFFFFF), since the register is 64 bits"); \
+        } \
+    } else if (size == 4) { \
+        if (imm_val.value > UINT32_MAX) { \
+            throw_error("Value must be 32 bits (max 0xFFFFFFFF), since the register is 32 bits"); \
+        } \
+    } else if (size == 2) { \
+        if (imm_val.value > UINT16_MAX) { \
+            throw_error("Value must be 16 bits (max 0xFFFF), since the register is 16 bits"); \
+        } \
+    } else if (size == 1) { \
+        if (imm_val.value > UINT8_MAX) { \
+            throw_error("Value must be 8 bits (max 0xFF), since the register is 8 bits"); \
+        } \
+    }
+
+
 define_mnemonic(HLT);
 //Data
 define_mnemonic(DB);
@@ -75,5 +127,6 @@ define_mnemonic(SUB);
 define_mnemonic(LEA);
 define_mnemonic(MOV);
 //Misc
+define_mnemonic(CMP);
 define_mnemonic(INT);
 define_mnemonic(SYSCALL);

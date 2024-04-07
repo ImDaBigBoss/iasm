@@ -32,26 +32,17 @@ define_mnemonic(ADD) {
         //0xC0 is the mod field for a register to register move (0b11 << 6)
         append_opcode(0xC0 + get_two_register_magic(destination, source));
     }
-    // add rax, 1
+    // add rax, 0x12345678
     else if (op1->type == REGISTER_OPERAND && op1->indirect == false && op2->type == IMMEDIATE_OPERAND) {
         cpu_register_t* destination = (cpu_register_t*) op1->value;
-
-        union register_value_t {
-            uint64_t value;
-            uint8_t bytes[8];
-        };
-        union register_value_t reg_val;
-        reg_val.value = *((uint64_t*) op2->value);
+        get_32bit_capped_immediate_value(op2, destination->size);
 
         int size = destination->size;
         if (destination->size == 8) {
             size = 4;
-            if (reg_val.value > UINT32_MAX) {
-                throw_error("Value must be 32 bits (max 0xFFFFFFFF), even though the register is 64 bits");
-            }
         }
 
-        if (destination->code == R0) { //The are special opcodes for adding to the a register
+        if (destination->code == R0) { //The are special opcodes for adding to the first register
             if (destination->size == 1) {
                 append_opcode(0x04);
             } else if (destination->size == 2) {
@@ -80,7 +71,7 @@ define_mnemonic(ADD) {
         }
 
         for (int i = 0; i < size; i++) {
-            append_opcode(reg_val.bytes[i]);
+            append_opcode(imm_val.bytes[i]);
         }
     } else {
         throw_error("Invalid operands, ADD instruction was not understood");

@@ -51,56 +51,31 @@ define_mnemonic(MOV) {
     //Number -> register
     // mov rax, 0x12345678
     else if (op1->type == REGISTER_OPERAND && op1->indirect == false && op2->type == IMMEDIATE_OPERAND) {
-        union register_value_t {
-            uint64_t value;
-            uint8_t bytes[8];
-        };
-        union register_value_t reg_val;
-        reg_val.value = *((uint64_t*) op2->value);
-        
         cpu_register_t* destination = (cpu_register_t*) op1->value;
-        
+        get_immediate_value(op2, destination->size);
+
         if (destination->size == 1) {
-            if (reg_val.value > UINT8_MAX) {
-                throw_error("The immediate must be 8 bits (max 0xFF) since the selected register is 8 bit");
-            }
             append_opcode(0xB0 + destination->code);
-            append_opcode(reg_val.bytes[0]);
         } else if (destination->size == 2) {
-            if (reg_val.value > UINT16_MAX) {
-                throw_error("The immediate must be 16 bits (max 0xFFFF) since the selected register is 16 bit");
-            }
             append_opcode(0x66);
             append_opcode(0xB8 + destination->code);
-            append_opcode(reg_val.bytes[0]);
-            append_opcode(reg_val.bytes[1]);
+        } else if (destination->size == 4) {
+            append_opcode(0xB8 + destination->code);
         } else {
-            if (destination->size == 8) {
-                append_opcode(0x48);
-            } else { //32 bit
-                if (reg_val.value > UINT32_MAX) {
-                    throw_error("The immediate must be 32 bits (max 0xFFFFFFFF) since the selected register is 32 bit");
-                }
-            }
-
+            append_opcode(0x48);
             append_opcode(0xB8 + destination->code);
         }
 
         for (int i = 0; i < destination->size; i++) {
-            append_opcode(reg_val.bytes[i]);
+            append_opcode(imm_val.bytes[i]);
         }
     }
     //Number -> address in register
     // mov [rax], 0x12345678
     else if (op1->type == REGISTER_OPERAND && op1->indirect && op2->type == IMMEDIATE_OPERAND) {
-        union register_value_t {
-            uint64_t value;
-            uint8_t bytes[8];
-        };
-        union register_value_t reg_val;
-        reg_val.value = *((uint64_t*) op2->value);
-
-        if (reg_val.value > UINT32_MAX) {
+        op_immediate_value_t imm_val;
+        imm_val.value = *((uint64_t*) op2->value);
+        if (imm_val.value > UINT32_MAX) {
             throw_error("The immediate must be 32 bits (max 0xFFFFFFFF)");
         }
 
@@ -109,22 +84,22 @@ define_mnemonic(MOV) {
             throw_error("The destination register must be 32 or 64 bit");
         }
 
-        if (reg_val.value <= UINT8_MAX) {
+        if (imm_val.value <= UINT8_MAX) {
             if (destination->size == 4) {
                 append_opcode(0x67);
             }
             append_opcode(0xC6);
             append_opcode(destination->code);
-            append_opcode(reg_val.bytes[0]);
-        } else if (reg_val.value <= UINT16_MAX) {
+            append_opcode(imm_val.bytes[0]);
+        } else if (imm_val.value <= UINT16_MAX) {
             append_opcode(0x66);
             if (destination->size == 4) {
                 append_opcode(0x67);
             }
             append_opcode(0xC7);
             append_opcode(destination->code);
-            append_opcode(reg_val.bytes[0]);
-            append_opcode(reg_val.bytes[1]);
+            append_opcode(imm_val.bytes[0]);
+            append_opcode(imm_val.bytes[1]);
         } else {
             if (destination->size == 4) {
                 append_opcode(0x67);
@@ -132,7 +107,7 @@ define_mnemonic(MOV) {
             append_opcode(0xC7);
             append_opcode(destination->code);
             for (int i = 0; i < 4; i++) {
-                append_opcode(reg_val.bytes[i]);
+                append_opcode(imm_val.bytes[i]);
             }
         }
     }
@@ -174,15 +149,11 @@ define_mnemonic(MOV) {
             //We want to add a int32 displacement, so we set the mod field to 0b10
             append_opcode(modrm + 0x80);
 
-            union register_value_t {
-                uint32_t value;
-                uint8_t bytes[4];
-            };
-            union register_value_t reg_val;
-            reg_val.value = op1->displacement;
+            op_immediate_value_t imm_val;
+            imm_val.value = op1->displacement;
 
             for (int i = 0; i < 4; i++) {
-                append_opcode(reg_val.bytes[i]);
+                append_opcode(imm_val.bytes[i]);
             }
         } else {
             append_opcode(modrm);
