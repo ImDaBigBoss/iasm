@@ -1,6 +1,6 @@
 # IASM
 
-This assembler is an attempt to learn more about assembly and how machine code functions.
+This assembler is an attempt to learn more about x86 assembly and how machine code functions.
 
 **Please note that this project is under development!** As such, it really is not recommended that you use this for anything serious. There are plenty of real assemblers out there, for example [NASM](https://www.nasm.us/) is a good choice.
 

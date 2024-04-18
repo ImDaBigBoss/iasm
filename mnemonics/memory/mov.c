@@ -120,6 +120,9 @@ define_mnemonic(MOV) {
         if (destination->size == 1 || destination->size == 2) {
             throw_error("The destination register must be 32 or 64 bit");
         }
+        if (op1->indirect && op2->indirect) {
+            throw_error("Both operands can't be indirect");
+        }
 
         if (source->size == 2) {
             append_opcode(0x66);
@@ -172,7 +175,7 @@ define_mnemonic(MOV) {
         append_opcode(0x8B);
         append_opcode((8 * ((uint8_t) destination->code)) + 5);
 
-        append_absolute_label_reference((char*) op2->value);
+        append_label_reference((char*) op2->value, ABSOULTE_LABEL_REFERENCE);
         for (int i = 0; i < 8; i++) {
             append_opcode(0x00);
         }

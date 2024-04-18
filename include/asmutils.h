@@ -61,6 +61,42 @@ typedef struct {
     int size;
 } cpu_register_t;
 
+
+#define SEGMENT_TYPE_NUM 4
+typedef enum {
+    TEXT,
+    DATA,
+    RODATA,
+    BSS
+} segment_type_t;
+
+typedef enum {
+    ABSOULTE_LABEL_REFERENCE,
+    RELATIVE_LABEL_REFERENCE
+} replacement_type_t;
+
+typedef struct {
+    void* data;
+    replacement_type_t type;
+    int address;
+} replacement_t;
+
+typedef struct {
+    segment_type_t segment_type;
+
+    uint8_t* opcodes;
+    int opcode_num;
+
+    replacement_t* replacements;
+    int replacement_num;
+} segment_data_t;
+
+typedef struct {
+    char* name;
+    segment_type_t segment;
+    int local_address;
+} label_t;
+
 cpu_register_t get_register(char* str);
 
 uint8_t get_two_register_magic(cpu_register_t* dest, cpu_register_t* src);

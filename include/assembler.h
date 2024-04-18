@@ -5,6 +5,6 @@
 
 #include <executables.h>
 
-#define MAX_OPERANDS 50
+#define MAX_OPERANDS 4
 
 bool assemble(FILE* source, FILE* output, executable_format_t format);

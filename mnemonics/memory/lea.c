@@ -72,9 +72,9 @@ define_mnemonic(LEA) {
         }
 
         append_opcode(0x8D);
-        append_opcode(0x35); //ModRM byte for RIP relative addressing
+        append_opcode(0x05 + destination->code * 8);
 
-        append_relative_label_reference((char*) op2->value);
+        append_label_reference((char*) op2->value, RELATIVE_LABEL_REFERENCE);
         for (int i = 0; i < 4; i++) {
             append_opcode(0x00);
         }

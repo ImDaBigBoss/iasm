@@ -1,7 +1,5 @@
 #include <mnemonics.h>
 
-//See Vol 2A chapter 3 page 516 of the Intel manual for more information
-
 define_mnemonic(CMP) {
     if (line->operand_num != 2) {
         throw_error("Only 2 operands are allowed");

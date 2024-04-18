@@ -375,6 +375,13 @@ bool parse_source_lvl2(lvl1_line_t** lines, int line_num, lvl2_line_t** lines_ou
                 printf("Error line %d: Label definition can't have operands\n", line->line_num);
                 errors_found = true;
             }
+        } else if (line->mnemonic[0] == '.') { //Segment definition
+            if (new_line->operand_num != 0) {
+                printf("Error line %d: Segment definition can't have operands\n", line->line_num);
+                errors_found = true;
+            }
+
+            str_to_upper(line->mnemonic);
         } else { //Instruction
             str_to_upper(line->mnemonic);
 
@@ -405,14 +412,11 @@ bool parse_source_lvl2(lvl1_line_t** lines, int line_num, lvl2_line_t** lines_ou
     return errors_found;
 }
 
-bool lex_source(lvl2_line_t** lines, int line_num, uint8_t** opcodes, int* opcode_num, int* absolute_address_num, uint64_t** absolute_address_addresses) {
+bool lex_source(lvl2_line_t** lines, int line_num, segment_data_t* segments, label_t** label_definitions, int* label_definition_num) {
     bool errors_found = false;
 
-    int label_definition_num = 0;
-    label_t* label_definitions = 0;
-
-    int replacement_num = 0;
-    replacement_t* replacements = 0;
+    segment_type_t current_segment_type = TEXT;
+    segment_data_t* current_segment = &segments[TEXT];
 
     for (int i = 0; i < line_num; i++) {
         lvl2_line_t* line = &(*lines)[i];
@@ -431,97 +435,58 @@ bool lex_source(lvl2_line_t** lines, int line_num, uint8_t** opcodes, int* opcod
             }
 
             //Add the label to the list of definitions
-            int current_label_definition_num = label_definition_num++;
-            label_definitions = (label_t*) realloc(label_definitions, sizeof(label_t) * label_definition_num);
+            int current_label_definition_num = (*label_definition_num)++;
+            *label_definitions = (label_t*) realloc(*label_definitions, sizeof(label_t) * (*label_definition_num));
 
-            label_t* new_label = &label_definitions[current_label_definition_num];
+            label_t* new_label = &(*label_definitions)[current_label_definition_num];
             new_label->name = (char*) malloc(mnsize);
             memcpy(new_label->name, line->mnemonic, mnsize);
-            new_label->local_address = *opcode_num;
-            continue;
-        }
-
-        if (strcmp(line->mnemonic, "NOP") == 0) {
-            append_opcode(0x90);
-        }
-        check_mnemonic(HLT)
-        check_mnemonic(DB)
-        check_mnemonic(DDW)
-        check_mnemonic(DQW)
-        check_mnemonic(DW)
-        check_mnemonic(ADD)
-        check_mnemonic(DEC)
-        check_mnemonic(DIV)
-        check_mnemonic(INC)
-        check_mnemonic(MUL)
-        check_mnemonic(SUB)
-        check_mnemonic(LEA)
-        check_mnemonic(MOV)
-        check_mnemonic(CMP)
-        check_mnemonic(INT)
-        check_mnemonic(SYSCALL)
-        else {
-            printf("Error line %d: Unknown mnemonic \"%s\"\n", line->line_num, line->mnemonic);
-            errors_found = true;
-        }
-    }
-
-    if (errors_found) {
-        return true;
-    }
-
-    //Go through the replacements
-    for (int i = 0; i < replacement_num; i++) {
-        replacement_type_t type = replacements[i].type;
-        uint8_t* code_address = &(*opcodes)[replacements[i].address];
-
-        if (type == ABSOULTE_LABEL_REFERENCE || type == RELATIVE_LABEL_REFERENCE) {
-            char* label_name = (char*) replacements[i].data;
-
-            uint64_t address = 0;
-            for (int j = 0; j < label_definition_num; j++) {
-                if (strcmp(label_definitions[j].name, label_name) == 0) {
-                    address = label_definitions[j].local_address;
-                    break;
-                }
-            }
-
-            if (address) {
-                if (type == RELATIVE_LABEL_REFERENCE) {
-                    int32_t relative_address = (int32_t) (address - (replacements[i].address + sizeof(int32_t)));
-                    memcpy(code_address, &relative_address, sizeof(int32_t));
-                } else {
-                    //Replace the opcode with the address relative to the start of the code
-                    memcpy(code_address, &address, sizeof(uint64_t));
-
-                    //Add the address to the list of references
-                    if (*absolute_address_num == 0) {
-                        *absolute_address_addresses = (uint64_t*) malloc(sizeof(uint64_t));
-                    } else {
-                        *absolute_address_addresses = (uint64_t*) realloc(*absolute_address_addresses, sizeof(uint64_t) * (*absolute_address_num + 1));
-                    }
-                    (*absolute_address_addresses)[*absolute_address_num] = (uint64_t) code_address;
-                    (*absolute_address_num)++;
-                }
+            new_label->segment = current_segment_type;
+            new_label->local_address = current_segment->opcode_num;
+        } else if (line->mnemonic[0] == '.') { //Segment definition
+            if (strcmp(line->mnemonic, ".TEXT") == 0) {
+                current_segment_type = TEXT;
+            } else if (strcmp(line->mnemonic, ".DATA") == 0) {
+                current_segment_type = DATA;
+            } else if (strcmp(line->mnemonic, ".RODATA") == 0) {
+                current_segment_type = RODATA;
+            } else if (strcmp(line->mnemonic, ".BSS") == 0) {
+                current_segment_type = BSS;
             } else {
-                printf("Reference to undefined label %s!\n", label_name);
-                return true;
+                printf("Error line %d: Unknown segment \"%s\"\n", line->line_num, line->mnemonic);
+                errors_found = true;
+                continue;
             }
 
-            free(label_name);
+            current_segment = &segments[current_segment_type];
         } else {
-            printf("Unknown replacement type %d\n", type);
-            return true;
+            if (strcmp(line->mnemonic, "NOP") == 0) {
+                append_opcode(0x90);
+            }
+            check_mnemonic(HLT)
+            check_mnemonic(DB)
+            check_mnemonic(DDW)
+            check_mnemonic(DQW)
+            check_mnemonic(DW)
+            check_mnemonic(ADD)
+            check_mnemonic(DEC)
+            check_mnemonic(DIV)
+            check_mnemonic(INC)
+            check_mnemonic(MUL)
+            check_mnemonic(SUB)
+            check_mnemonic(LEA)
+            check_mnemonic(MOV)
+            check_mnemonic(CMP)
+            check_mnemonic(INT)
+            check_mnemonic(SYSCALL)
+            else {
+                printf("Error line %d: Unknown mnemonic \"%s\"\n", line->line_num, line->mnemonic);
+                errors_found = true;
+            }
         }
     }
 
-    //Now we're done with the lables, we can free the definitions
-    for (int i = 0; i < label_definition_num; i++) {
-        free(label_definitions[i].name);
-    }
-    free(label_definitions);
-
-    return false;
+    return errors_found;
 }
 
 bool assemble(FILE* source, FILE* output, executable_format_t format) {
@@ -558,13 +523,16 @@ bool assemble(FILE* source, FILE* output, executable_format_t format) {
     free(lines_lvl1);
 
     //Lex to produce opcodes
-    uint8_t* opcodes = 0;
-    int opcode_num = 0;
+    segment_data_t segments[SEGMENT_TYPE_NUM];
+    memset(segments, 0, sizeof(segments));
+    for (int i = 0; i < SEGMENT_TYPE_NUM; i++) {
+        segments[i].segment_type = i;
+    }
 
-    uint64_t* absolute_address_addresses = 0;
-    int absolute_address_num = 0;
+    label_t* label_definitions = 0;
+    int label_definition_num = 0;
 
-    errors_found = lex_source(&lines_lvl2, line_num, &opcodes, &opcode_num, &absolute_address_num, &absolute_address_addresses);
+    errors_found = lex_source(&lines_lvl2, line_num, segments, &label_definitions, &label_definition_num);
     if (errors_found) {
         return false;
     }
@@ -582,18 +550,38 @@ bool assemble(FILE* source, FILE* output, executable_format_t format) {
     }
     free(lines_lvl2);
 
-    if (opcodes == 0) {
+    bool no_code_generated = true;
+    for (int i = 0; i < SEGMENT_TYPE_NUM; i++) {
+        if (segments[i].opcode_num > 0) {
+            no_code_generated = false;
+            break;
+        }
+    }
+    if (no_code_generated) {
         printf("Error: No code generated!\n");
         return false;
     }
 
     uint64_t entry_offset = 0; //TODO: Maybe add this?
-    write_exec(format, output, opcodes, entry_offset, opcode_num, absolute_address_num, absolute_address_addresses);
+    errors_found = write_exec(format, output, entry_offset, segments, label_definitions, label_definition_num);
 
-    free(opcodes);
-    if (absolute_address_addresses != 0) {
-        free(absolute_address_addresses);
+    //Now we're done with the labels, we can free the definitions
+    if (label_definition_num != 0) {
+        for (int i = 0; i < label_definition_num; i++) {
+            free(label_definitions[i].name);
+        }
+        free(label_definitions);
     }
 
-    return true;
+    //Free the segments and any data they contain
+    for (int i = 0; i < SEGMENT_TYPE_NUM; i++) {
+        if (segments[i].opcode_num != 0) {
+            free(segments[i].opcodes);
+        }
+        if (segments[i].replacement_num != 0) {
+            free(segments[i].replacements);
+        }
+    }
+
+    return !errors_found;
 }

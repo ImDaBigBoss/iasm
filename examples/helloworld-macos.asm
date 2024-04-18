@@ -1,3 +1,5 @@
+.text
+
 ; Write to stdout
 mov rax, 0x2000004 ; sys_write
 mov rdi, 1 ; stdout
@@ -9,6 +11,8 @@ syscall
 mov rax, 0x2000001 ; sys_exit
 mov rbx, 0 ; exit code
 syscall
+
+.rodata
 
 message:
     db "Hello, World!", 0xa, 0
