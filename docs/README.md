@@ -14,8 +14,8 @@ Below is a table for extra mnemonics that are not opcodes, but that the assemble
 |----------|-------------|
 | DB       | Define some raw data (can be any size or type) |
 | DW       | Define a word (2 bytes) |
-| DDW       | Define a double word (4 bytes) |
-| DQW       | Define a quad word (8 bytes) |
+| DDW      | Define a double word (4 bytes) |
+| DQW      | Define a quad word (8 bytes) |
 
 ```asm
 db "Hello world", 0x20, 0x0
@@ -71,7 +71,15 @@ The above example could be used if you wanted to load addresses of labels in pos
 
 ## Directives
 
-There are currently no directives.
+Directives are opcodes meant for the assembler, they aren't transcribed to the final file. IASM supports a few:
+
+| Directive | Description |
+|-----------|-------------|
+| .text     | Sets the code following the instruction to be part of the TEXT segment of the binary, if supported by the output format. This is for code to be executed. The default segment is TEXT. |
+| .data     | Sets the code following the instruction to be part of the DATA segment of the binary, if supported by the output format. This is for read and write data in the program. The default segment is TEXT. |
+| .bss      | Sets the code following the instruction to be part of the BSS segment of the binary, if supported by the output format. This is for uninitialised variables. The default segment is TEXT. |
+| .rodata   | Sets the code following the instruction to be part of the RODATA segment of the binary, if supported by the output format. This is for read only data in the program. The default segment is TEXT. |
+
 
 ## Macros
 
