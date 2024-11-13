@@ -464,6 +464,15 @@ bool lex_source(lvl2_line_t** lines, int line_num, segment_data_t* segments, lab
                 append_opcode(0x90);
             }
             check_mnemonic(HLT)
+            check_mnemonic(CALL)
+            check_mnemonic(JMP)
+            check_mnemonic(RET)
+            check_mnemonic(JE)
+            check_mnemonic(JG)
+            check_mnemonic(JGE)
+            check_mnemonic(JL)
+            check_mnemonic(JLE)
+            check_mnemonic(JNE)
             check_mnemonic(DB)
             check_mnemonic(DDW)
             check_mnemonic(DQW)

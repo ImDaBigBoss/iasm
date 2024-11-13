@@ -87,6 +87,17 @@ typedef union {
 
 
 define_mnemonic(HLT);
+//Branching
+define_mnemonic(CALL);
+define_mnemonic(JMP);
+define_mnemonic(RET);
+// - Conditional
+define_mnemonic(JE);
+define_mnemonic(JG);
+define_mnemonic(JGE);
+define_mnemonic(JL);
+define_mnemonic(JLE);
+define_mnemonic(JNE);
 //Data
 define_mnemonic(DB);
 define_mnemonic(DDW);
