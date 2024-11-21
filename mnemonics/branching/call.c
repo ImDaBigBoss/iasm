@@ -59,6 +59,6 @@ define_mnemonic(CALL) {
             append_opcode(0x00);
         }
     } else {
-        throw_error("Invalid operands, JMP instruction was not understood");
+        throw_error("Invalid operands, CALL instruction was not understood");
     }
 }
